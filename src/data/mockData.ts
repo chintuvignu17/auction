@@ -27,17 +27,17 @@ export const ALL_10_IPL_TEAMS: Array<{
   color: string;
   logo: string;
 }> = [
-  { name: 'Chennai Super Kings', shortCode: 'CSK', color: '#facc15', logo: '/images/teams/csk.png' },
-  { name: 'Mumbai Indians', shortCode: 'MI', color: '#2563eb', logo: '/images/teams/mi.png' },
-  { name: 'Royal Challengers Bengaluru', shortCode: 'RCB', color: '#ef4444', logo: '/images/teams/rcb.png' },
-  { name: 'Kolkata Knight Riders', shortCode: 'KKR', color: '#8b5cf6', logo: '/images/teams/kkr.png' },
-  { name: 'Sunrisers Hyderabad', shortCode: 'SRH', color: '#f97316', logo: '/images/teams/srh.png' },
-  { name: 'Rajasthan Royals', shortCode: 'RR', color: '#ec4899', logo: '/images/teams/rr.png' },
-  { name: 'Delhi Capitals', shortCode: 'DC', color: '#06b6d4', logo: '/images/teams/dc.png' },
-  { name: 'Punjab Kings', shortCode: 'PBKS', color: '#dc2626', logo: '/images/teams/pbks.png' },
-  { name: 'Gujarat Titans', shortCode: 'GT', color: '#0ea5e9', logo: '/images/teams/gt.png' },
-  { name: 'Lucknow Super Giants', shortCode: 'LSG', color: '#38bdf8', logo: '/images/teams/lsg.png' },
-];
+    { name: 'Chennai Super Kings', shortCode: 'CSK', color: '#facc15', logo: '/images/teams/csk.png' },
+    { name: 'Mumbai Indians', shortCode: 'MI', color: '#2563eb', logo: '/images/teams/mi.png' },
+    { name: 'Royal Challengers Bengaluru', shortCode: 'RCB', color: '#ef4444', logo: '/images/teams/rcb.png' },
+    { name: 'Kolkata Knight Riders', shortCode: 'KKR', color: '#8b5cf6', logo: '/images/teams/kkr.png' },
+    { name: 'Sunrisers Hyderabad', shortCode: 'SRH', color: '#f97316', logo: '/images/teams/srh.png' },
+    { name: 'Rajasthan Royals', shortCode: 'RR', color: '#ec4899', logo: '/images/teams/rr.png' },
+    { name: 'Delhi Capitals', shortCode: 'DC', color: '#06b6d4', logo: '/images/teams/dc.png' },
+    { name: 'Punjab Kings', shortCode: 'PBKS', color: '#dc2626', logo: '/images/teams/pbks.png' },
+    { name: 'Gujarat Titans', shortCode: 'GT', color: '#0ea5e9', logo: '/images/teams/gt.png' },
+    { name: 'Lucknow Super Giants', shortCode: 'LSG', color: '#38bdf8', logo: '/images/teams/lsg.png' },
+  ];
 
 export const INITIAL_DEMO_TEAMS: Team[] = ALL_10_IPL_TEAMS.map((t, idx) => ({
   id: `team-${t.shortCode.toLowerCase()}`,
