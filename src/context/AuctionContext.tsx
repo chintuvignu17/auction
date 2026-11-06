@@ -1125,6 +1125,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (auction) {
       persistLocalState(auction, updatedTeams, players, bids, newLogs);
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          await supabase.from('teams').update({
+            is_claimed: false,
+            owner_name: '',
+            owner_pin: ''
+          }).eq('id', teamId);
+        } catch (err) {
+          console.warn('Supabase kick update error:', err);
+        }
+      }
     }
 
     broadcast('PARTICIPANT_KICKED', { teamId, kickedName, teams: updatedTeams });
@@ -1265,6 +1277,21 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLogs(newLogs);
 
     persistLocalState(updatedAuction, teams, players, bids, newLogs);
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('auctions').update({
+          status: updatedAuction.status,
+          timer_ends_at: updatedAuction.timer_ends_at,
+          timer_paused_remaining: updatedAuction.timer_paused_remaining,
+          updated_at: updatedAuction.updated_at
+        }).eq('id', auction.id);
+        await supabase.from('auction_logs').insert([newLog]);
+      } catch (err) {
+        console.warn('Supabase pause/resume error:', err);
+      }
+    }
+
     broadcast('STATE_UPDATE', { auction: updatedAuction, teams, players, bids, logs: newLogs });
   };
 
@@ -1322,6 +1349,24 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsTimerRunning(false);
 
     persistLocalState(updatedAuction, teams, players, bids, newLogs);
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('auctions').update({
+          status: 'COMPLETED',
+          current_player_id: null,
+          current_bid: 0,
+          current_bidder_team_id: null,
+          timer_ends_at: null,
+          timer_paused_remaining: null,
+          updated_at: updatedAuction.updated_at
+        }).eq('id', auction.id);
+        await supabase.from('auction_logs').insert([endLog]);
+      } catch (err) {
+        console.warn('Supabase end auction error:', err);
+      }
+    }
+
     broadcast('STATE_UPDATE', { auction: updatedAuction, teams, players, bids, logs: newLogs });
     soundManager.playSoldFanfare();
   };
