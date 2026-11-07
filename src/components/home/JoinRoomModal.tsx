@@ -9,7 +9,8 @@ import {
   AlertCircle,
   Sparkles,
   Lock,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuction } from '../../context/AuctionContext';
 import { INITIAL_DEMO_TEAMS } from '../../data/mockData';
@@ -69,6 +70,44 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   }, [availableTeams, selectedTeamId]);
 
   if (!isOpen) return null;
+
+  // USER REQUIREMENT: 1 Person = 1 Team Locked Until Room Ends. Cannot choose multiple teams!
+  const alreadyAssignedTeam = userSession?.teamId 
+    ? effectiveTeams.find(t => t.id === userSession.teamId) 
+    : null;
+
+  if (alreadyAssignedTeam) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+        <div className="bg-[#0b1222] border-2 border-amber-500/50 rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-[0_0_50px_rgba(245,158,11,0.3)]">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto text-amber-400">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black uppercase text-amber-400 tracking-widest block">
+              Active Franchise Locked
+            </span>
+            <h3 className="font-display font-black text-xl text-white mt-1">
+              You are leading {alreadyAssignedTeam.name} ({alreadyAssignedTeam.short_code})
+            </h3>
+            <p className="text-xs text-slate-300 mt-2">
+              Each participant is locked to one franchise for the entire auction. You cannot claim multiple teams.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (onJoined) onJoined();
+              onClose();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm shadow transition active:scale-95 cursor-pointer flex items-center justify-center space-x-2"
+          >
+            <span>Continue Bidding in Arena</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Selected team object
   const selectedTeam = effectiveTeams.find(t => t.id === selectedTeamId) || availableTeams[0];

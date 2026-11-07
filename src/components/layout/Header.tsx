@@ -113,44 +113,51 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-1.5 shrink-0">
           
           {/* My Team / Admin Pill */}
-          <button 
-            onClick={onOpenJoin}
-            title="Tap to switch team or role"
-            className="flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-xs cursor-pointer active:scale-95 transition"
-          >
-            {userSession?.isAdmin && myTeam ? (
-              <>
-                <Shield className="w-3 h-3 text-amber-400" />
-                <div 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: myTeam.color }} 
-                />
-                <span className="font-black text-white text-[11px] max-w-[55px] truncate">
-                  {myTeam.short_code}
-                </span>
-              </>
-            ) : userSession?.isAdmin ? (
-              <>
-                <Shield className="w-3 h-3 text-amber-400" />
-                <span className="font-black text-amber-400 text-[11px]">ADMIN</span>
-              </>
-            ) : myTeam ? (
-              <>
-                <div 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: myTeam.color }} 
-                />
-                <span className="font-bold text-white text-[11px] max-w-[60px] truncate">
-                  {myTeam.short_code}
-                </span>
-              </>
-            ) : (
-              <>
-                <Users className="w-3 h-3 text-cyan-400" />
-                <span className="text-slate-300 text-[11px]">Viewer</span>
-              </>
-            )}
-          </button>
+          {userSession?.isAdmin && myTeam ? (
+            <div 
+              title={`Admin & Owner of ${myTeam.name}`}
+              className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-800/90 border border-slate-700/80 text-xs"
+            >
+              <Shield className="w-3 h-3 text-amber-400" />
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: myTeam.color }} 
+              />
+              <span className="font-black text-white text-[11px] max-w-[55px] truncate">
+                {myTeam.short_code}
+              </span>
+            </div>
+          ) : userSession?.isAdmin ? (
+            <div 
+              title="Room Host & Admin"
+              className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs"
+            >
+              <Shield className="w-3 h-3 text-amber-400" />
+              <span className="font-black text-amber-400 text-[11px]">ADMIN</span>
+            </div>
+          ) : myTeam ? (
+            <div 
+              title={`Your Team: ${myTeam.name} (Locked for this auction)`}
+              className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-800/90 border border-slate-700/80 text-xs select-none"
+            >
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: myTeam.color }} 
+              />
+              <span className="font-bold text-white text-[11px] max-w-[60px] truncate">
+                {myTeam.short_code}
+              </span>
+            </div>
+          ) : (
+            <button 
+              onClick={onOpenJoin}
+              title="Click to claim an available IPL team"
+              className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-xs cursor-pointer active:scale-95 transition"
+            >
+              <Users className="w-3 h-3 text-cyan-400" />
+              <span className="text-cyan-300 font-bold text-[11px]">Join Team</span>
+            </button>
+          )}
 
           {/* Sound Toggle */}
           <button

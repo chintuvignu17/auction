@@ -400,47 +400,75 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
+    const targetRoom = (roomParam || localStorage.getItem('cricbid_last_room') || 'CRIC25').toUpperCase();
 
-    if (roomParam) {
-      // Auto join room
-      joinAuction(roomParam.toUpperCase(), 'VIEWER');
+    // 1. Check if user already has an active session for this target room
+    const savedRoomSession = localStorage.getItem(`cricbid_user_session_${targetRoom}`);
+    if (savedRoomSession) {
+      try {
+        const parsedSession = JSON.parse(savedRoomSession);
+        setUserSession(parsedSession);
+      } catch {}
+    }
+
+    // 2. Load or initialize room data without forcing a role or starting timer!
+    const saved = localStorage.getItem(`cricbid_auction_${targetRoom}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const loadedAuction: Auction = parsed.auction;
+        setAuction(loadedAuction);
+        setTeams(parsed.teams);
+        setPlayers(parsed.players);
+        setBids(parsed.bids || []);
+        setLogs(parsed.logs || []);
+        return;
+      } catch {}
+    }
+
+    // 3. Fallback: If it's a demo room or uninitialized room
+    if (targetRoom === 'CRIC25' || targetRoom === 'DEMO25') {
+      loadDemoAuction();
     } else {
-      // Check last loaded room
-      const lastRoom = localStorage.getItem('cricbid_last_room') || 'CRIC25';
-      const saved = localStorage.getItem(`cricbid_auction_${lastRoom}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          let loadedAuction: Auction = parsed.auction;
-          let loadedPlayers: Player[] = parsed.players;
-
-          // Auto-heal if room had no active player on stage
-          if (loadedAuction && loadedAuction.status !== 'COMPLETED' && (!loadedAuction.current_player_id || !loadedPlayers?.some(p => p.id === loadedAuction.current_player_id))) {
-            const firstUpcoming = loadedPlayers?.find(p => p.status === 'UPCOMING') || loadedPlayers?.[0];
-            if (firstUpcoming) {
-              firstUpcoming.status = 'IN_AUCTION';
-              loadedAuction = {
-                ...loadedAuction,
-                status: 'LIVE',
-                current_player_id: firstUpcoming.id,
-                current_bid: 0,
-                current_bidder_team_id: null,
-                timer_ends_at: new Date(Date.now() + (loadedAuction.timer_seconds || 15) * 1000).toISOString()
-              };
-            }
-          }
-
-          setAuction(loadedAuction);
-          setTeams(parsed.teams);
-          setPlayers(loadedPlayers);
-          setBids(parsed.bids || []);
-          setLogs(parsed.logs || []);
-        } catch {
-          loadDemoAuction();
-        }
-      } else {
-        loadDemoAuction();
-      }
+      // Dynamic room init strictly in WAITING state (no timer running until host starts!)
+      const newAuctionId = `auct-${targetRoom}`;
+      const dataAuction: Auction = {
+        ...INITIAL_DEMO_AUCTION,
+        id: newAuctionId,
+        room_code: targetRoom,
+        status: 'WAITING',
+        current_player_id: null,
+        current_bid: 0,
+        current_bidder_team_id: null,
+        timer_ends_at: null,
+        timer_paused_remaining: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const dataTeams: Team[] = INITIAL_DEMO_TEAMS.map(t => ({
+        ...t,
+        id: t.id,
+        auction_id: newAuctionId,
+        is_claimed: false,
+        owner_name: ''
+      }));
+      const dataPlayers: Player[] = INITIAL_DEMO_PLAYERS.map(p => ({
+        ...p,
+        auction_id: newAuctionId,
+        status: 'UPCOMING'
+      }));
+      setAuction(dataAuction);
+      setTeams(dataTeams);
+      setPlayers(dataPlayers);
+      setBids([]);
+      setLogs([{
+        id: `log-${Date.now()}`,
+        auction_id: newAuctionId,
+        action_type: 'AUCTION_STARTED',
+        description: `Room ${targetRoom} ready. Waiting for host to start bidding.`,
+        created_at: new Date().toISOString()
+      }]);
+      persistLocalState(dataAuction, dataTeams, dataPlayers, [], []);
     }
   }, [loadDemoAuction]);
 
@@ -449,13 +477,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const roomCode = `CRIC-${Math.floor(1000 + Math.random() * 9000)}`;
     const auctionId = `auct-${Date.now()}`;
 
+    // All players start as UPCOMING (waiting for host to call them to stage!)
     const newPlayers: Player[] = params.players.map((p, idx) => ({
       id: `p-${Date.now()}-${idx}`,
       auction_id: auctionId,
       name: p.name,
       role: p.role,
       base_price: p.basePrice,
-      status: idx === 0 ? 'IN_AUCTION' : 'UPCOMING',
+      status: 'UPCOMING',
       order_index: idx + 1,
       image_url: p.imageUrl || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=500&auto=format&fit=crop&q=60',
       country: p.country || 'India',
@@ -464,26 +493,22 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       created_at: new Date().toISOString()
     }));
 
-    const firstPlayer = newPlayers[0];
-    const newTimerEnds = firstPlayer 
-      ? new Date(Date.now() + (params.timerSeconds || 15) * 1000).toISOString() 
-      : null;
-
+    // Auction starts in WAITING state! Timer does NOT run until host starts the live auction!
     const newAuction: Auction = {
       id: auctionId,
       title: params.title,
       room_code: roomCode,
       admin_pin: params.adminPin,
-      status: firstPlayer ? 'LIVE' : 'WAITING',
-      timer_seconds: params.timerSeconds,
+      status: 'WAITING',
+      timer_seconds: params.timerSeconds || 15,
       min_bid_increment: params.minBidIncrement,
       purse_per_team: params.pursePerTeam,
       max_players_per_team: params.maxPlayersPerTeam,
       currency_symbol: params.currencySymbol || '₹',
-      current_player_id: firstPlayer ? firstPlayer.id : null,
+      current_player_id: null,
       current_bid: 0,
       current_bidder_team_id: null,
-      timer_ends_at: newTimerEnds,
+      timer_ends_at: null,
       timer_paused_remaining: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -511,9 +536,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: `log-${Date.now()}`,
       auction_id: auctionId,
       action_type: 'AUCTION_STARTED',
-      description: firstPlayer 
-        ? `Auction "${params.title}" is LIVE! ${firstPlayer.name} is on stage.`
-        : `Auction "${params.title}" created with room code ${roomCode}.`,
+      description: `Auction "${params.title}" created with room code ${roomCode}. Waiting for host to start bidding.`,
       created_at: new Date().toISOString()
     };
 
@@ -542,13 +565,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const chosenTeamIndex = params.adminTeamIndex !== undefined ? params.adminTeamIndex : 0;
     const chosenTeam = chosenTeamIndex >= 0 && chosenTeamIndex < newTeams.length ? newTeams[chosenTeamIndex] : null;
 
-    setUserSession({
+    const hostSession: ActiveUserSession = {
       role: 'ADMIN',
       displayName: params.adminDisplayName || (chosenTeam ? chosenTeam.owner_name : 'Room Admin'),
       isAdmin: true,
       adminPin: params.adminPin,
-      teamId: chosenTeam ? chosenTeam.id : null
-    });
+      teamId: chosenTeam ? chosenTeam.id : null,
+      room_code: roomCode
+    };
+
+    setUserSession(hostSession);
+    localStorage.setItem(`cricbid_user_session_${roomCode}`, JSON.stringify(hostSession));
+    localStorage.setItem('cricbid_user_session', JSON.stringify(hostSession));
 
     // Update query string
     window.history.replaceState(null, '', `?room=${roomCode}`);
@@ -593,14 +621,32 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (pin !== auctionData.admin_pin && pin !== '1234') {
               return { success: false, message: 'Invalid Admin PIN!' };
             }
-            setUserSession({
+            const adminSession: ActiveUserSession = {
               role: 'ADMIN',
               displayName: displayName || 'Admin',
               isAdmin: true,
               adminPin: pin,
-              teamId: teamId || null
-            });
+              teamId: teamId || null,
+              room_code: code
+            };
+            setUserSession(adminSession);
+            localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(adminSession));
+            localStorage.setItem('cricbid_user_session', JSON.stringify(adminSession));
           } else if (role === 'TEAM_OWNER') {
+            // Lock check: If this user on this device already claimed a different team in this room, block duplicate team selection
+            const savedSessionStr = localStorage.getItem(`cricbid_user_session_${code}`);
+            if (savedSessionStr) {
+              try {
+                const parsed = JSON.parse(savedSessionStr);
+                if (parsed.teamId && parsed.teamId !== teamId && !parsed.isAdmin) {
+                  return {
+                    success: false,
+                    message: 'You have already selected a team for this auction. Each participant is assigned one franchise for the entire auction.'
+                  };
+                }
+              } catch {}
+            }
+
             const team = (teamsData || []).find(t => t.id === teamId);
             if (!team) return { success: false, message: 'Please select an IPL team to join!' };
             
@@ -624,18 +670,26 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
               console.warn('Failed to update team claim in Supabase:', err);
             }
 
-            setUserSession({
+            const sessionData: ActiveUserSession = {
               role: 'TEAM_OWNER',
               displayName: team.owner_name,
               teamId: team.id,
-              isAdmin: false
-            });
+              isAdmin: false,
+              room_code: code
+            };
+            setUserSession(sessionData);
+            localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(sessionData));
+            localStorage.setItem('cricbid_user_session', JSON.stringify(sessionData));
           } else {
-            setUserSession({
+            const viewerSession: ActiveUserSession = {
               role: 'VIEWER',
               displayName: displayName || 'Spectator',
-              isAdmin: false
-            });
+              isAdmin: false,
+              room_code: code
+            };
+            setUserSession(viewerSession);
+            localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(viewerSession));
+            localStorage.setItem('cricbid_user_session', JSON.stringify(viewerSession));
           }
 
           localStorage.setItem('cricbid_last_room', code);
@@ -675,18 +729,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       // DYNAMIC ROOM INITIALIZATION:
       // When a friend opens an invitation link for ANY room code (e.g. CRIC-7371),
-      // seamlessly initialize the room on their device with all 10 IPL franchises and players!
+      // initialize the room on their device with all 10 IPL franchises and players in WAITING state!
       const newAuctionId = `auct-${code}`;
-      const firstPlayer = INITIAL_DEMO_PLAYERS[0];
       dataAuction = {
         ...INITIAL_DEMO_AUCTION,
         id: newAuctionId,
         room_code: code,
-        status: 'LIVE',
-        current_player_id: firstPlayer ? firstPlayer.id : null,
+        status: 'WAITING',
+        current_player_id: null,
         current_bid: 0,
         current_bidder_team_id: null,
-        timer_ends_at: new Date(Date.now() + 15 * 1000).toISOString(),
+        timer_ends_at: null,
+        timer_paused_remaining: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -699,14 +753,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }));
       dataPlayers = INITIAL_DEMO_PLAYERS.map(p => ({
         ...p,
-        auction_id: newAuctionId
+        auction_id: newAuctionId,
+        status: 'UPCOMING'
       }));
       dataBids = [];
       dataLogs = [{
         id: `log-${Date.now()}`,
         auction_id: newAuctionId,
         action_type: 'AUCTION_STARTED',
-        description: `Room ${code} connected. Welcome!`,
+        description: `Room ${code} connected. Waiting for host to start bidding.`,
         created_at: new Date().toISOString()
       }];
 
@@ -726,14 +781,32 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (pin !== dataAuction.admin_pin && pin !== '1234') {
         return { success: false, message: 'Invalid Admin PIN!' };
       }
-      setUserSession({
+      const adminSession: ActiveUserSession = {
         role: 'ADMIN',
         displayName: displayName || 'Admin',
         isAdmin: true,
         adminPin: pin,
-        teamId: teamId || null
-      });
+        teamId: teamId || null,
+        room_code: code
+      };
+      setUserSession(adminSession);
+      localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(adminSession));
+      localStorage.setItem('cricbid_user_session', JSON.stringify(adminSession));
     } else if (role === 'TEAM_OWNER') {
+      // Lock check: If this user on this device already claimed a different team in this room, block duplicate team selection
+      const savedSessionStr = localStorage.getItem(`cricbid_user_session_${code}`);
+      if (savedSessionStr) {
+        try {
+          const parsed = JSON.parse(savedSessionStr);
+          if (parsed.teamId && parsed.teamId !== teamId && !parsed.isAdmin) {
+            return {
+              success: false,
+              message: 'You have already selected a team for this auction. Each participant is assigned one franchise for the entire auction.'
+            };
+          }
+        } catch {}
+      }
+
       const team = dataTeams.find(t => t.id === teamId);
       if (!team) return { success: false, message: 'Please select an IPL team to join!' };
 
@@ -755,18 +828,26 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         teams: dataTeams
       });
 
-      setUserSession({
+      const sessionData: ActiveUserSession = {
         role: 'TEAM_OWNER',
         displayName: team.owner_name,
         teamId: team.id,
-        isAdmin: false
-      });
+        isAdmin: false,
+        room_code: code
+      };
+      setUserSession(sessionData);
+      localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(sessionData));
+      localStorage.setItem('cricbid_user_session', JSON.stringify(sessionData));
     } else {
-      setUserSession({
+      const viewerSession: ActiveUserSession = {
         role: 'VIEWER',
         displayName: displayName || 'Spectator',
-        isAdmin: false
-      });
+        isAdmin: false,
+        room_code: code
+      };
+      setUserSession(viewerSession);
+      localStorage.setItem(`cricbid_user_session_${code}`, JSON.stringify(viewerSession));
+      localStorage.setItem('cricbid_user_session', JSON.stringify(viewerSession));
     }
 
     localStorage.setItem('cricbid_last_room', code);
@@ -786,7 +867,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         role: 'ADMIN',
         displayName: 'Admin',
         isAdmin: true,
-        adminPin: pin
+        adminPin: pin,
+        room_code: auction.room_code
       });
       return true;
     }
@@ -801,7 +883,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         role: 'TEAM_OWNER',
         displayName: team.owner_name,
         teamId: team.id,
-        isAdmin: false
+        isAdmin: false,
+        room_code: auction.room_code
       });
       return true;
     }
@@ -809,12 +892,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setUserSession({
       role: 'VIEWER',
       displayName: 'Spectator',
-      isAdmin: false
+      isAdmin: false,
+      room_code: auction.room_code
     });
     return true;
   };
 
   const leaveAuction = () => {
+    if (auction?.room_code) {
+      localStorage.removeItem(`cricbid_user_session_${auction.room_code}`);
+    }
+    localStorage.removeItem('cricbid_user_session');
     setUserSession(null);
   };
 

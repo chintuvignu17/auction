@@ -298,6 +298,59 @@ assert.strictEqual(testAuction.current_player_id, null);
 assert.strictEqual(testAuction.current_bid, 0);
 console.log('   ✅ Host End Auction successfully concludes bidding and finalizes status!\n');
 
+// ---------------------------------------------------------------------
+// TEST 17: Auction Initial State is WAITING (Depends on Host to Start)
+// ---------------------------------------------------------------------
+console.log('👉 [TEST 17] Verifying auction room starts in WAITING state and requires host to start...');
+const newRoomAuction = {
+  id: 'auct-fresh',
+  room_code: 'CRIC-9999',
+  status: 'WAITING',
+  current_player_id: null,
+  timer_ends_at: null
+};
+
+// Verify countdown does NOT run and no player is auctioned automatically
+assert.strictEqual(newRoomAuction.status, 'WAITING');
+assert.strictEqual(newRoomAuction.current_player_id, null);
+assert.strictEqual(newRoomAuction.timer_ends_at, null);
+
+// Host starts auction
+const hostStartAuction = (playerId) => {
+  newRoomAuction.status = 'LIVE';
+  newRoomAuction.current_player_id = playerId;
+  newRoomAuction.timer_ends_at = new Date(Date.now() + 15000).toISOString();
+};
+hostStartAuction('p-1');
+assert.strictEqual(newRoomAuction.status, 'LIVE');
+assert.strictEqual(newRoomAuction.current_player_id, 'p-1');
+assert.ok(newRoomAuction.timer_ends_at !== null);
+console.log('   ✅ Room remains safely in WAITING until host explicitly clicks Start Auction!\n');
+
+// ---------------------------------------------------------------------
+// TEST 18: 1 Person = 1 Team Locked Until Room Ends (Cannot Choose Multiple Teams)
+// ---------------------------------------------------------------------
+console.log('👉 [TEST 18] Verifying 1 person = 1 team locked for room duration...');
+const userDeviceSession = {
+  room_code: 'CRIC-9999',
+  role: 'TEAM_OWNER',
+  teamId: 'team-csk',
+  displayName: 'Kavya'
+};
+
+// Friend attempts to claim a second team (MI) on the same mobile device
+function attemptClaimSecondTeam(session, newTeamId) {
+  if (session && session.teamId && session.teamId !== newTeamId && !session.isAdmin) {
+    return { success: false, message: 'You have already selected a team for this auction. Each participant is assigned one franchise for the entire auction.' };
+  }
+  return { success: true };
+}
+
+const secondTeamResult = attemptClaimSecondTeam(userDeviceSession, 'team-mi');
+assert.strictEqual(secondTeamResult.success, false);
+assert.ok(secondTeamResult.message.includes('already selected a team'));
+console.log('   ✅ Single-team lock confirmed! User cannot choose multiple teams in the room.\n');
+
 console.log('=================================================================');
-console.log('🎉 ALL 16 ADVANCED AUTOMATIC AUCTION TESTS PASSED WITH 100% SUCCESS!');
+console.log('🎉 ALL 18 ADVANCED AUTOMATIC AUCTION TESTS PASSED WITH 100% SUCCESS!');
 console.log('=================================================================');

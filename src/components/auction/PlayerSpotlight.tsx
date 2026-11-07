@@ -153,34 +153,44 @@ export const PlayerSpotlight: React.FC<PlayerSpotlightProps> = ({ onOpenPlayerPi
           </div>
         ) : (
           /* ========================================================
-             PARTICIPANT / VIEWER WAITING SCREEN
+             PARTICIPANT / VIEWER WAITING SCREEN (DEPENDS ON HOST)
              ======================================================== */
           <div className="relative z-10 max-w-sm space-y-3 animate-fadeIn">
             <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)]">
               <Clock className="w-7 h-7 animate-pulse" />
             </div>
             <h2 className="font-display font-black text-xl text-white">
-              Auction Stage Ready
+              {auction?.status === 'WAITING' ? 'Waiting for Host to Start' : 'Waiting for Next Player'}
             </h2>
             <p className="text-xs text-slate-400">
-              The first player is ready for live bidding. Click below to begin!
+              {auction?.status === 'WAITING' 
+                ? 'The room host will start the live auction shortly. Get your team bidding strategy ready!' 
+                : 'The host will bring the next player to the stage soon.'}
             </p>
             {nextPlayer && (
-              <div className="space-y-2 pt-1">
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-400 font-mono font-bold flex items-center justify-between">
-                  <span>Next: {nextPlayer.name} ({formatRole(nextPlayer.role)})</span>
-                  <span className="text-[10px] text-emerald-400 font-bold">{formatCurrency(nextPlayer.base_price, auction?.currency_symbol)}</span>
+              <div className="space-y-2 pt-1 text-left">
+                <div className="p-3 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-1">
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">
+                    Next Up on Stage:
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-black text-white">{nextPlayer.name}</span>
+                    <span className="text-xs text-emerald-400 font-mono font-bold">
+                      {formatCurrency(nextPlayer.base_price, auction?.currency_symbol)}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 block">
+                    {formatRole(nextPlayer.role)} • {nextPlayer.country || 'India'}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => startPlayerAuction(nextPlayer.id)}
-                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-black font-extrabold text-xs shadow-lg transition active:scale-95 cursor-pointer ring-1 ring-amber-300/40"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  <span>Bring {nextPlayer.name} to Stage & Start Bidding</span>
-                </button>
               </div>
             )}
+            <div className="pt-2">
+              <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>Auction Controlled by Host</span>
+              </div>
+            </div>
           </div>
         )}
 

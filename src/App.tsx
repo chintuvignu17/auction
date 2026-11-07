@@ -53,8 +53,16 @@ function AuctionDashboard() {
   // Modals state
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(() => {
-    // Open immediately if user followed an invite link (?room=...)
-    return Boolean(initialRoomQuery);
+    // Only open join modal if following an invite link AND user does not already have a claimed team
+    if (!initialRoomQuery) return false;
+    const saved = localStorage.getItem(`cricbid_user_session_${initialRoomQuery.toUpperCase()}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.teamId || parsed.isAdmin) return false;
+      } catch {}
+    }
+    return true;
   });
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isSupabaseConfigOpen, setIsSupabaseConfigOpen] = useState(false);
@@ -65,12 +73,21 @@ function AuctionDashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
-  // If room parameter arrives in URL later or changes (open join modal if NOT already in active session for this room)
+  // If room parameter arrives in URL later or changes (open join modal ONLY if NOT already in active session for this room)
   useEffect(() => {
     if (initialRoomQuery) {
+      const code = initialRoomQuery.toUpperCase();
       setCurrentView('AUCTION');
-      setInitialJoinRoomCode(initialRoomQuery);
-      if (!userSession || (userSession as any).room_code !== initialRoomQuery) {
+      setInitialJoinRoomCode(code);
+      const saved = localStorage.getItem(`cricbid_user_session_${code}`);
+      let hasTeam = false;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.teamId || parsed.isAdmin) hasTeam = true;
+        } catch {}
+      }
+      if (!hasTeam && (!userSession || (!userSession.teamId && !userSession.isAdmin))) {
         setIsJoinOpen(true);
       }
     }

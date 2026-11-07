@@ -98,6 +98,7 @@ export interface ActiveUserSession {
   displayName: string;
   isAdmin: boolean;
   adminPin?: string;
+  room_code?: string;
 }
 
 export interface BidValidationResult {
