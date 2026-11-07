@@ -10,22 +10,23 @@ import {
   Zap, 
   Share2,
   ArrowRight,
-  Shield,
-  Database
+  Shield
 } from 'lucide-react';
 import { ALL_10_IPL_TEAMS } from '../../data/mockData';
+import { useAuction } from '../../context/AuctionContext';
 
 interface HomePageProps {
   onCreateRoom: () => void;
   onJoinRoom: (roomCode?: string) => void;
-  onOpenSupabaseConfig?: () => void;
+  onResumeRoom?: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
   onCreateRoom,
   onJoinRoom,
-  onOpenSupabaseConfig
+  onResumeRoom
 }) => {
+  const { auction, userSession, myTeam } = useAuction();
   const [inputRoomCode, setInputRoomCode] = useState('');
 
   const handleJoinSubmit = (e: React.FormEvent) => {
@@ -60,16 +61,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Right Header Status */}
           <div className="flex items-center space-x-2">
-            {onOpenSupabaseConfig && (
-              <button
-                onClick={onOpenSupabaseConfig}
-                title="Connect Supabase Cloud Database"
-                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer active:scale-95"
-              >
-                <Database className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Supabase</span>
-              </button>
-            )}
             <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>IPL 2025 Edition</span>
@@ -125,6 +116,40 @@ export const HomePage: React.FC<HomePageProps> = ({
             ))}
           </div>
         </div>
+
+        {/* ACTIVE ROOM RE-ENTER BANNER: Allows 1-click re-entry back into live room */}
+        {auction && onResumeRoom && (
+          <div className="w-full max-w-2xl p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-[#0b1328] to-cyan-500/15 border-2 border-amber-500/50 shadow-[0_0_35px_rgba(245,158,11,0.25)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 animate-fadeIn">
+            <div className="flex items-center space-x-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400 shrink-0 shadow-md">
+                <Gavel className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] uppercase font-black text-amber-400 tracking-widest">Active Auction Room</span>
+                  <span className="font-mono font-black text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
+                    {auction.room_code}
+                  </span>
+                </div>
+                <h3 className="font-display font-black text-white text-base sm:text-lg truncate mt-0.5">
+                  {auction.title || 'IPL Auction Arena'}
+                </h3>
+                <p className="text-xs text-slate-300 truncate">
+                  {myTeam ? `Playing as ${myTeam.name} (${myTeam.short_code})` : userSession?.isAdmin ? 'Room Host (Admin)' : 'Spectating'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onResumeRoom}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 text-black font-display font-black text-xs sm:text-sm tracking-wide shadow-[0_0_20px_rgba(245,158,11,0.4)] transition active:scale-95 cursor-pointer shrink-0 flex items-center justify-center space-x-2"
+            >
+              <span>Re-Enter Room</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* TWO PRIMARY USER OPTIONS (Create Room & Join Room) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl">

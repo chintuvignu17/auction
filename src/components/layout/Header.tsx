@@ -4,14 +4,14 @@ import {
   Share2, 
   Volume2, 
   VolumeX, 
-  Database, 
   PlusCircle, 
   UserCheck, 
   Copy, 
   Check, 
   Shield, 
   Users,
-  Mic
+  Mic,
+  Home
 } from 'lucide-react';
 import { useAuction } from '../../context/AuctionContext';
 import { soundManager } from '../../lib/sound';
@@ -20,22 +20,31 @@ import { commentaryEngine } from '../../lib/commentary';
 interface HeaderProps {
   onOpenSetup: () => void;
   onOpenJoin: () => void;
-  onOpenSupabaseConfig: () => void;
+  onOpenSupabaseConfig?: () => void;
   onOpenSummary: () => void;
   onGoHome?: () => void;
+  onConfirmLeave?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSetup,
   onOpenJoin,
-  onOpenSupabaseConfig,
   onOpenSummary,
-  onGoHome
+  onGoHome,
+  onConfirmLeave
 }) => {
-  const { auction, userSession, myTeam, isUsingSupabase } = useAuction();
+  const { auction, userSession, myTeam } = useAuction();
   const [isMuted, setIsMuted] = useState(soundManager.getIsMuted());
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(commentaryEngine.getIsEnabled());
   const [copied, setCopied] = useState(false);
+
+  const handleExitClick = () => {
+    if (onConfirmLeave) {
+      onConfirmLeave();
+    } else if (onGoHome) {
+      onGoHome();
+    }
+  };
 
   const toggleSound = () => {
     const newState = soundManager.toggleMute();
@@ -61,9 +70,9 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Brand / Logo */}
         <div 
-          onClick={onGoHome}
+          onClick={handleExitClick}
           className="flex items-center space-x-2 shrink-0 cursor-pointer group"
-          title={onGoHome ? "Back to Homepage" : undefined}
+          title="Back to Homepage"
         >
           <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 shadow-[0_0_12px_rgba(245,158,11,0.4)] border border-amber-400/40 group-hover:scale-105 transition">
             <Gavel className="w-4 h-4 text-black" />
@@ -169,18 +178,13 @@ export const Header: React.FC<HeaderProps> = ({
             <Mic className="w-3.5 h-3.5" />
           </button>
 
-          {/* Supabase Cloud Database */}
+          {/* Home / Exit Button */}
           <button
-            onClick={onOpenSupabaseConfig}
-            title={isUsingSupabase ? 'Supabase Database Connected' : 'Configure Supabase Cloud Database'}
-            className={`relative p-1.5 rounded-xl border transition cursor-pointer active:scale-90 ${
-              isUsingSupabase 
-                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
-                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80'
-            }`}
+            onClick={handleExitClick}
+            title="Leave / Return to Home"
+            className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition cursor-pointer active:scale-90"
           >
-            <Database className="w-3.5 h-3.5" />
-            <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isUsingSupabase ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <Home className="w-3.5 h-3.5 text-slate-300" />
           </button>
 
         </div>

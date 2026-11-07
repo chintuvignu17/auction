@@ -21,6 +21,7 @@ import { AuctionSettingsModal } from './components/admin/AuctionSettingsModal';
 import { AuctionSummaryModal } from './components/dashboard/AuctionSummaryModal';
 import { SoldCelebrationModal } from './components/auction/SoldCelebrationModal';
 import { UnsoldAlertModal } from './components/auction/UnsoldAlertModal';
+import { LeaveRoomConfirmModal } from './components/common/LeaveRoomConfirmModal';
 import { 
   Zap, 
   Users, 
@@ -32,7 +33,7 @@ import {
 } from 'lucide-react';
 
 function AuctionDashboard() {
-  const { auction, userSession, logs, startPlayerAuction } = useAuction();
+  const { auction, userSession, logs, startPlayerAuction, leaveAuction } = useAuction();
 
   // REQUIREMENT 1: When users open main URL, show Homepage first.
   // When opening a valid invitation link (?room=...), go directly to that room's joining page.
@@ -52,9 +53,10 @@ function AuctionDashboard() {
   // Modals state
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(() => {
-    // Only open if there is an initial room query in URL AND user has no active session
-    return Boolean(initialRoomQuery && !userSession);
+    // Open immediately if user followed an invite link (?room=...)
+    return Boolean(initialRoomQuery);
   });
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isSupabaseConfigOpen, setIsSupabaseConfigOpen] = useState(false);
   const [isPlayerPickerOpen, setIsPlayerPickerOpen] = useState(false);
   const [isManagePlayersOpen, setIsManagePlayersOpen] = useState(false);
@@ -63,12 +65,12 @@ function AuctionDashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
-  // If room parameter arrives in URL later or changes (only open join modal if NOT already in session)
+  // If room parameter arrives in URL later or changes (open join modal if NOT already in active session for this room)
   useEffect(() => {
     if (initialRoomQuery) {
       setCurrentView('AUCTION');
       setInitialJoinRoomCode(initialRoomQuery);
-      if (!userSession) {
+      if (!userSession || (userSession as any).room_code !== initialRoomQuery) {
         setIsJoinOpen(true);
       }
     }
@@ -94,7 +96,7 @@ function AuctionDashboard() {
         <HomePage 
           onCreateRoom={handleOpenCreateRoom}
           onJoinRoom={(code) => handleOpenJoinRoom(code)}
-          onOpenSupabaseConfig={() => setIsSupabaseConfigOpen(true)}
+          onResumeRoom={() => setCurrentView('AUCTION')}
         />
       ) : (
         /* 2. LIVE AUCTION ROOM VIEW: Full Responsive Desktop + Mobile */
@@ -121,9 +123,9 @@ function AuctionDashboard() {
             onOpenJoin={() => {
               if (!userSession?.isAdmin) setIsJoinOpen(true);
             }}
-            onOpenSupabaseConfig={() => setIsSupabaseConfigOpen(true)}
             onOpenSummary={() => setIsSummaryOpen(true)}
-            onGoHome={() => setCurrentView('HOME')}
+            onGoHome={() => setIsLeaveModalOpen(true)}
+            onConfirmLeave={() => setIsLeaveModalOpen(true)}
           />
 
           {/* DESKTOP / TABLET SUB-NAVIGATION BAR (Hidden on Mobile) */}
@@ -263,7 +265,6 @@ function AuctionDashboard() {
                     onOpenManageTeams={() => setIsManageTeamsOpen(true)}
                     onOpenManualOverride={() => setIsManualOverrideOpen(true)}
                     onOpenSettings={() => setIsSettingsOpen(true)}
-                    onOpenSupabaseConfig={() => setIsSupabaseConfigOpen(true)}
                     onSwitchToArena={() => setActiveTab('ARENA')}
                   />
                 ) : (
@@ -345,6 +346,22 @@ function AuctionDashboard() {
       {/* Dramatic Event Animation Modals */}
       <SoldCelebrationModal />
       <UnsoldAlertModal />
+
+      {/* Leave Room Confirmation Modal */}
+      <LeaveRoomConfirmModal
+        isOpen={isLeaveModalOpen}
+        roomCode={auction?.room_code}
+        onClose={() => setIsLeaveModalOpen(false)}
+        onGoHome={() => {
+          setIsLeaveModalOpen(false);
+          setCurrentView('HOME');
+        }}
+        onExitCompletely={() => {
+          setIsLeaveModalOpen(false);
+          leaveAuction();
+          setCurrentView('HOME');
+        }}
+      />
     </>
   );
 }

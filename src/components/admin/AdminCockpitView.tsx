@@ -15,7 +15,6 @@ import {
   Zap, 
   Sliders,
   CheckCircle,
-  Database,
   ShieldCheck,
   Plus,
   UserX,
@@ -31,7 +30,7 @@ interface AdminCockpitViewProps {
   onOpenManageTeams: () => void;
   onOpenManualOverride: () => void;
   onOpenSettings: () => void;
-  onOpenSupabaseConfig: () => void;
+  onOpenSupabaseConfig?: () => void;
   onSwitchToArena: () => void;
 }
 
@@ -41,7 +40,6 @@ export const AdminCockpitView: React.FC<AdminCockpitViewProps> = ({
   onOpenManageTeams,
   onOpenManualOverride,
   onOpenSettings,
-  onOpenSupabaseConfig,
   onSwitchToArena
 }) => {
   const { 
@@ -346,26 +344,18 @@ export const AdminCockpitView: React.FC<AdminCockpitViewProps> = ({
           </button>
         </div>
 
-        {/* End Auction & Database Config */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        {/* End Auction */}
+        <div className="pt-1">
           <button
             onClick={() => {
               if (window.confirm('Are you sure you want to end the auction? This will conclude bidding and finalize all team squads.')) {
                 endAuction();
               }
             }}
-            className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 text-xs font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 cursor-pointer"
+            className="w-full p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 text-xs font-bold flex items-center justify-center space-x-1.5 transition active:scale-95 cursor-pointer"
           >
             <XCircle className="w-3.5 h-3.5 text-red-400" />
             <span>End Auction</span>
-          </button>
-
-          <button
-            onClick={onOpenSupabaseConfig}
-            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center justify-center space-x-1.5 transition cursor-pointer"
-          >
-            <Database className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Database Config</span>
           </button>
         </div>
       </div>

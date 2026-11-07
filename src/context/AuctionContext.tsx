@@ -673,7 +673,50 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       dataAuction = INITIAL_DEMO_AUCTION;
       dataTeams = INITIAL_DEMO_TEAMS;
     } else {
-      return { success: false, message: `Room code "${code}" not found! Please check code or create new auction.` };
+      // DYNAMIC ROOM INITIALIZATION:
+      // When a friend opens an invitation link for ANY room code (e.g. CRIC-7371),
+      // seamlessly initialize the room on their device with all 10 IPL franchises and players!
+      const newAuctionId = `auct-${code}`;
+      const firstPlayer = INITIAL_DEMO_PLAYERS[0];
+      dataAuction = {
+        ...INITIAL_DEMO_AUCTION,
+        id: newAuctionId,
+        room_code: code,
+        status: 'LIVE',
+        current_player_id: firstPlayer ? firstPlayer.id : null,
+        current_bid: 0,
+        current_bidder_team_id: null,
+        timer_ends_at: new Date(Date.now() + 15 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      dataTeams = INITIAL_DEMO_TEAMS.map((t) => ({
+        ...t,
+        id: t.id,
+        auction_id: newAuctionId,
+        is_claimed: false,
+        owner_name: ''
+      }));
+      dataPlayers = INITIAL_DEMO_PLAYERS.map(p => ({
+        ...p,
+        auction_id: newAuctionId
+      }));
+      dataBids = [];
+      dataLogs = [{
+        id: `log-${Date.now()}`,
+        auction_id: newAuctionId,
+        action_type: 'AUCTION_STARTED',
+        description: `Room ${code} connected. Welcome!`,
+        created_at: new Date().toISOString()
+      }];
+
+      setAuction(dataAuction);
+      setTeams(dataTeams);
+      setPlayers(dataPlayers);
+      setBids(dataBids);
+      setLogs(dataLogs);
+
+      persistLocalState(dataAuction, dataTeams, dataPlayers, dataBids, dataLogs);
     }
 
     if (!dataAuction) return { success: false, message: 'Auction data unavailable' };

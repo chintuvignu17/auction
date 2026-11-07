@@ -12,6 +12,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAuction } from '../../context/AuctionContext';
+import { INITIAL_DEMO_TEAMS } from '../../data/mockData';
 
 interface JoinRoomModalProps {
   isOpen: boolean;
@@ -36,7 +37,12 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   
   // Two clean options: 'PARTICIPANT' or 'SPECTATOR'
   const [joinType, setJoinType] = useState<'PARTICIPANT' | 'SPECTATOR'>('PARTICIPANT');
-  const [displayName, setDisplayName] = useState(userSession?.displayName || '');
+  const [displayName, setDisplayName] = useState(() => {
+    if (userSession?.displayName && userSession.displayName !== 'Spectator' && userSession.displayName !== 'Room Admin') {
+      return userSession.displayName;
+    }
+    return '';
+  });
   const [selectedTeamId, setSelectedTeamId] = useState('');
   
   const [errorMsg, setErrorMsg] = useState('');
@@ -50,10 +56,10 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
     }
   }, [initialRoomCode, urlRoom]);
 
-  // Filter out teams that are already claimed by another person!
-  // USER REQUIREMENT: "if one person selects a team to participate then that team not shown to other person who opening the link"
-  const availableTeams = teams.filter(t => !t.is_claimed && (!t.owner_name || t.owner_name.trim() === ''));
-  const claimedTeams = teams.filter(t => t.is_claimed || (t.owner_name && t.owner_name.trim() !== ''));
+  // Always fallback to all 10 IPL franchises if room teams are empty or loading!
+  const effectiveTeams = teams && teams.length > 0 ? teams : INITIAL_DEMO_TEAMS;
+  const availableTeams = effectiveTeams.filter(t => !t.is_claimed && (!t.owner_name || t.owner_name.trim() === ''));
+  const claimedTeams = effectiveTeams.filter(t => t.is_claimed || (t.owner_name && t.owner_name.trim() !== ''));
 
   // Auto-select first available team if current selection is invalid or taken
   useEffect(() => {
@@ -65,7 +71,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   if (!isOpen) return null;
 
   // Selected team object
-  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+  const selectedTeam = effectiveTeams.find(t => t.id === selectedTeamId) || availableTeams[0];
 
   // Submit Join as Participant
   const handleJoinParticipant = async (e: React.FormEvent) => {
@@ -207,7 +213,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
                 <span className="text-slate-400 flex items-center space-x-1">
                   <Users className="w-3.5 h-3.5 text-amber-400" />
                   <span>Teams Joined:</span>
-                  <strong className="text-white font-mono">{claimedTeams.length} / {teams.length}</strong>
+                  <strong className="text-white font-mono">{claimedTeams.length} / {effectiveTeams.length}</strong>
                 </span>
                 <span className={`font-bold px-2 py-0.5 rounded ${
                   availableTeams.length > 0 
