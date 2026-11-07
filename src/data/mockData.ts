@@ -5,16 +5,16 @@ export const INITIAL_DEMO_AUCTION: Auction = {
   title: 'TATA IPL Mega Auction 2025',
   room_code: 'CRIC25',
   admin_pin: '1234',
-  status: 'WAITING',
+  status: 'LIVE', // Starts LIVE so players are immediately shown
   timer_seconds: 15, // Default to 15 seconds per requirement
   min_bid_increment: 2000000, // 20 Lakhs
   purse_per_team: 1000000000, // 100 Crores
   max_players_per_team: 15, // STRICT REQUIREMENT: exactly 15 players max capacity per team
   currency_symbol: '₹', // Fixed to Indian Rupee
-  current_player_id: null,
+  current_player_id: 'p-1', // Virat Kohli on stage immediately
   current_bid: 0,
   current_bidder_team_id: null,
-  timer_ends_at: null,
+  timer_ends_at: new Date(Date.now() + 15 * 1000).toISOString(),
   timer_paused_remaining: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
@@ -1578,7 +1578,7 @@ export const INITIAL_DEMO_PLAYERS: Player[] = IPL_PLAYERS_CATALOG.map((p, idx) =
   bowling_style: p.bowlingStyle,
   country: p.country,
   base_price: p.basePrice,
-  status: 'UPCOMING',
+  status: idx === 0 ? 'IN_AUCTION' : 'UPCOMING',
   order_index: idx + 1,
   image_url: p.imageUrl,
   custom_stats: {

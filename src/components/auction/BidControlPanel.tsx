@@ -75,8 +75,20 @@ export const BidControlPanel: React.FC<BidControlPanelProps> = ({ onOpenJoinModa
             )}
           </div>
         ) : (
-          <div className="text-center text-xs text-slate-400">
-            Bidding activates when auction is LIVE and a player is called to stage by the host.
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-slate-400 truncate">
+              {nextPlayer ? `Next: ${nextPlayer.name}` : 'Waiting for live player...'}
+            </div>
+            {nextPlayer && (
+              <button
+                type="button"
+                onClick={() => startPlayerAuction(nextPlayer.id)}
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow transition active:scale-95 cursor-pointer shrink-0"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Call {nextPlayer.name.split(' ')[0]}</span>
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -160,14 +160,25 @@ export const PlayerSpotlight: React.FC<PlayerSpotlightProps> = ({ onOpenPlayerPi
               <Clock className="w-7 h-7 animate-pulse" />
             </div>
             <h2 className="font-display font-black text-xl text-white">
-              Waiting for Room Host
+              Auction Stage Ready
             </h2>
             <p className="text-xs text-slate-400">
-              The auction admin will call the first player to stage shortly. Get your team budget ready!
+              The first player is ready for live bidding. Click below to begin!
             </p>
             {nextPlayer && (
-              <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-400 font-mono font-bold">
-                Next in line: {nextPlayer.name} ({formatRole(nextPlayer.role)})
+              <div className="space-y-2 pt-1">
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-400 font-mono font-bold flex items-center justify-between">
+                  <span>Next: {nextPlayer.name} ({formatRole(nextPlayer.role)})</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">{formatCurrency(nextPlayer.base_price, auction?.currency_symbol)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => startPlayerAuction(nextPlayer.id)}
+                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-black font-extrabold text-xs shadow-lg transition active:scale-95 cursor-pointer ring-1 ring-amber-300/40"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Bring {nextPlayer.name} to Stage & Start Bidding</span>
+                </button>
               </div>
             )}
           </div>
@@ -215,7 +226,7 @@ export const PlayerSpotlight: React.FC<PlayerSpotlightProps> = ({ onOpenPlayerPi
         
         {/* Left: Player Avatar */}
         <div className="shrink-0 relative">
-          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-950 border-2 border-amber-400/50 shadow-xl">
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-slate-950 border-2 border-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
             {currentPlayer.image_url ? (
               <img 
                 src={currentPlayer.image_url} 
@@ -233,8 +244,8 @@ export const PlayerSpotlight: React.FC<PlayerSpotlightProps> = ({ onOpenPlayerPi
             )}
 
             {/* Stage micro tag */}
-            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.2 rounded bg-amber-500/90 text-black text-[8px] font-black uppercase tracking-wider flex items-center space-x-0.5 shadow">
-              <Flame className="w-2.5 h-2.5" />
+            <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider flex items-center space-x-0.5 shadow-md">
+              <Flame className="w-3 h-3 fill-black text-black" />
               <span>LIVE</span>
             </div>
           </div>

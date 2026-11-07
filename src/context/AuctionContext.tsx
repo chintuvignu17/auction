@@ -411,9 +411,28 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          setAuction(parsed.auction);
+          let loadedAuction: Auction = parsed.auction;
+          let loadedPlayers: Player[] = parsed.players;
+
+          // Auto-heal if room had no active player on stage
+          if (loadedAuction && loadedAuction.status !== 'COMPLETED' && (!loadedAuction.current_player_id || !loadedPlayers?.some(p => p.id === loadedAuction.current_player_id))) {
+            const firstUpcoming = loadedPlayers?.find(p => p.status === 'UPCOMING') || loadedPlayers?.[0];
+            if (firstUpcoming) {
+              firstUpcoming.status = 'IN_AUCTION';
+              loadedAuction = {
+                ...loadedAuction,
+                status: 'LIVE',
+                current_player_id: firstUpcoming.id,
+                current_bid: 0,
+                current_bidder_team_id: null,
+                timer_ends_at: new Date(Date.now() + (loadedAuction.timer_seconds || 15) * 1000).toISOString()
+              };
+            }
+          }
+
+          setAuction(loadedAuction);
           setTeams(parsed.teams);
-          setPlayers(parsed.players);
+          setPlayers(loadedPlayers);
           setBids(parsed.bids || []);
           setLogs(parsed.logs || []);
         } catch {
@@ -430,21 +449,41 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const roomCode = `CRIC-${Math.floor(1000 + Math.random() * 9000)}`;
     const auctionId = `auct-${Date.now()}`;
 
+    const newPlayers: Player[] = params.players.map((p, idx) => ({
+      id: `p-${Date.now()}-${idx}`,
+      auction_id: auctionId,
+      name: p.name,
+      role: p.role,
+      base_price: p.basePrice,
+      status: idx === 0 ? 'IN_AUCTION' : 'UPCOMING',
+      order_index: idx + 1,
+      image_url: p.imageUrl || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=500&auto=format&fit=crop&q=60',
+      country: p.country || 'India',
+      batting_style: p.battingStyle || 'Right-hand bat',
+      bowling_style: p.bowlingStyle || 'Right-arm medium',
+      created_at: new Date().toISOString()
+    }));
+
+    const firstPlayer = newPlayers[0];
+    const newTimerEnds = firstPlayer 
+      ? new Date(Date.now() + (params.timerSeconds || 15) * 1000).toISOString() 
+      : null;
+
     const newAuction: Auction = {
       id: auctionId,
       title: params.title,
       room_code: roomCode,
       admin_pin: params.adminPin,
-      status: 'WAITING',
+      status: firstPlayer ? 'LIVE' : 'WAITING',
       timer_seconds: params.timerSeconds,
       min_bid_increment: params.minBidIncrement,
       purse_per_team: params.pursePerTeam,
       max_players_per_team: params.maxPlayersPerTeam,
       currency_symbol: params.currencySymbol || '₹',
-      current_player_id: null,
+      current_player_id: firstPlayer ? firstPlayer.id : null,
       current_bid: 0,
       current_bidder_team_id: null,
-      timer_ends_at: null,
+      timer_ends_at: newTimerEnds,
       timer_paused_remaining: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -468,26 +507,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
     });
 
-    const newPlayers: Player[] = params.players.map((p, idx) => ({
-      id: `p-${Date.now()}-${idx}`,
-      auction_id: auctionId,
-      name: p.name,
-      role: p.role,
-      base_price: p.basePrice,
-      status: 'UPCOMING',
-      order_index: idx + 1,
-      image_url: p.imageUrl || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=500&auto=format&fit=crop&q=60',
-      country: p.country || 'India',
-      batting_style: p.battingStyle || 'Right-hand bat',
-      bowling_style: p.bowlingStyle || 'Right-arm medium',
-      created_at: new Date().toISOString()
-    }));
-
     const initialLog: AuctionLog = {
       id: `log-${Date.now()}`,
       auction_id: auctionId,
       action_type: 'AUCTION_STARTED',
-      description: `Auction "${params.title}" created with room code ${roomCode}.`,
+      description: firstPlayer 
+        ? `Auction "${params.title}" is LIVE! ${firstPlayer.name} is on stage.`
+        : `Auction "${params.title}" created with room code ${roomCode}.`,
       created_at: new Date().toISOString()
     };
 

@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 function AuctionDashboard() {
-  const { auction, userSession, logs } = useAuction();
+  const { auction, userSession, logs, startPlayerAuction } = useAuction();
 
   // REQUIREMENT 1: When users open main URL, show Homepage first.
   // When opening a valid invitation link (?room=...), go directly to that room's joining page.
@@ -239,7 +239,8 @@ function AuctionDashboard() {
             {/* TAB 3: PLAYER POOL */}
             {activeTab === 'PLAYERS' && (
               <div className="animate-fadeIn">
-                <PlayerPoolView onCallPlayer={(id) => {
+                <PlayerPoolView onCallPlayer={async (id) => {
+                  await startPlayerAuction(id);
                   setActiveTab('ARENA');
                 }} />
               </div>
